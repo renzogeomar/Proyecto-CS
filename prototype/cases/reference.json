@@ -1,0 +1,42 @@
+[
+  {
+    "id": "matricula_universitaria",
+    "requirements": "Una universidad registra estudiantes (student_id, student_name) y cursos (course_id, course_name). Cada curso lo dicta un profesor (professor_id, professor_name), aunque un profesor puede dictar varios cursos. La nota grade de una matrícula depende de la pareja student_id y course_id. Un estudiante puede matricularse en varios cursos y cada curso tiene varios estudiantes. student_id determina student_name; course_id determina course_name y professor_id; professor_id determina professor_name; la pareja student_id, course_id determina grade.",
+    "expected": {
+      "attributes": ["student_id", "student_name", "course_id", "course_name", "professor_id", "professor_name", "grade"],
+      "functional_dependencies": [
+        {"determinant": ["student_id"], "dependent": ["student_name"]},
+        {"determinant": ["course_id"], "dependent": ["course_name", "professor_id"]},
+        {"determinant": ["professor_id"], "dependent": ["professor_name"]},
+        {"determinant": ["student_id", "course_id"], "dependent": ["grade"]}
+      ]
+    }
+  },
+  {
+    "id": "pedidos_tienda",
+    "requirements": "Una tienda guarda pedidos. order_id determina customer_id y order_date. customer_id determina customer_name. product_id determina product_name y unit_price. Cada pedido contiene varios productos; la pareja order_id y product_id determina quantity. Un cliente puede realizar muchos pedidos y un producto puede figurar en muchos pedidos. Los atributos son order_id, customer_id, order_date, customer_name, product_id, product_name, unit_price y quantity.",
+    "expected": {
+      "attributes": ["order_id", "customer_id", "order_date", "customer_name", "product_id", "product_name", "unit_price", "quantity"],
+      "functional_dependencies": [
+        {"determinant": ["order_id"], "dependent": ["customer_id", "order_date"]},
+        {"determinant": ["customer_id"], "dependent": ["customer_name"]},
+        {"determinant": ["product_id"], "dependent": ["product_name", "unit_price"]},
+        {"determinant": ["order_id", "product_id"], "dependent": ["quantity"]}
+      ]
+    }
+  },
+  {
+    "id": "citas_clinica",
+    "requirements": "Una clínica registra pacientes, médicos y citas. patient_id determina patient_name y patient_phone. doctor_id determina doctor_name y specialty_id. specialty_id determina specialty_name. appointment_id determina patient_id, doctor_id, appointment_date y room_id. room_id determina room_name. Un paciente o médico puede participar en muchas citas. Conserva los identificadores y nombres indicados.",
+    "expected": {
+      "attributes": ["patient_id", "patient_name", "patient_phone", "doctor_id", "doctor_name", "specialty_id", "specialty_name", "appointment_id", "appointment_date", "room_id", "room_name"],
+      "functional_dependencies": [
+        {"determinant": ["patient_id"], "dependent": ["patient_name", "patient_phone"]},
+        {"determinant": ["doctor_id"], "dependent": ["doctor_name", "specialty_id"]},
+        {"determinant": ["specialty_id"], "dependent": ["specialty_name"]},
+        {"determinant": ["appointment_id"], "dependent": ["patient_id", "doctor_id", "appointment_date", "room_id"]},
+        {"determinant": ["room_id"], "dependent": ["room_name"]}
+      ]
+    }
+  }
+]

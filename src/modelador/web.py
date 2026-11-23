@@ -8,7 +8,7 @@ from threading import Lock, Thread
 import time
 from uuid import uuid4
 
-from .evaluation import validate_postgres
+from .adapters.postgres import validate_postgres
 from .pipeline import design
 
 

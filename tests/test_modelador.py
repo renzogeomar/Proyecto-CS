@@ -6,7 +6,8 @@ import unittest
 
 from modelador.core import audit_model, canonical_cover, closure, parse_fds, synthesize_3nf
 from modelador.evaluation import load_cases, run_benchmark, score
-from modelador.pipeline import design, render_ddl, validate_dictionary_response
+from modelador.agents import validate_dictionary_response
+from modelador.pipeline import design
 
 
 CASES = Path(__file__).parents[1] / "experiments" / "cases" / "reference.json"

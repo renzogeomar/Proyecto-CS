@@ -6,8 +6,10 @@ import json
 from pathlib import Path
 import sys
 
-from .evaluation import load_cases, run_benchmark, validate_postgres
-from .pipeline import Ollama, design
+from .adapters.ollama import Ollama
+from .adapters.postgres import validate_postgres
+from .evaluation import load_cases, run_benchmark
+from .pipeline import design
 
 
 def main(argv=None):

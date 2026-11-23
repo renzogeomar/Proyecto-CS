@@ -8,7 +8,9 @@ from io import StringIO
 from unittest.mock import patch
 
 from modelador.cli import main
-from modelador.pipeline import ANALYST_SCHEMA, Ollama, OllamaError, design
+from modelador.adapters.ollama import Ollama, OllamaError
+from modelador.agents import ANALYST_SCHEMA
+from modelador.pipeline import design
 
 
 class StreamingTests(unittest.TestCase):

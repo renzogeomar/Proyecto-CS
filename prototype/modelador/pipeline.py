@@ -245,6 +245,9 @@ def validate_dictionary_response(answer, attributes):
     converted = []
     for name in attributes:
         details = _required_object(columns[name], f"diccionario.{name}", ("type", "nullable", "description"))
+        unexpected = sorted(set(details) - {"type", "nullable", "description"})
+        if unexpected:
+            raise ModelError(f"diccionario.{name}: campos desconocidos {unexpected}")
         converted.append({"name": name, **details})
     return validate_dictionary({"columns": converted}, attributes)
 

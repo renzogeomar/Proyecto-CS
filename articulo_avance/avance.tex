@@ -1,0 +1,161 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla,es-nodecimaldot]{babel}
+\usepackage{cite}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{balance}
+\usepackage[hidelinks]{hyperref}
+
+\begin{document}
+\title{Modelado de Datos Autónomo: Sistemas Multiagente para Normalización en 3FN y Generación de Esquemas\\
+{\footnotesize Autonomous Data Modeling: Multi-Agent Systems for 3NF Normalization and Schema Generation}}
+
+\author{\IEEEauthorblockN{Alberth Edwar Riveros Vilca, Renzo Geomar Mamani Quispe y Antonio Arroyo Paz}
+\IEEEauthorblockA{\textit{Escuela Profesional de Ingeniería de Sistemas}\\
+\textit{Universidad Nacional de San Agustín}\\
+Arequipa, Perú\\
+ariverosv@unsa.edu.pe, remamaniq@unsa.edu.pe, aarroyop@unsa.edu.pe}}
+
+\maketitle
+
+\begin{abstract}
+Desarrollamos un prototipo que convierte requisitos escritos en un esquema relacional y genera las sentencias para crear sus tablas en PostgreSQL. Tres agentes que usan el mismo modelo de lenguaje local analizan los requisitos, documentan los atributos y proponen tipos de datos. Un componente determinista sintetiza las relaciones, comprueba la tercera forma normal y genera el SQL. En el caso piloto de matrícula universitaria, PostgreSQL ejecutó las sentencias de ambos flujos automáticos. El esquema multiagente preservó las cinco dependencias de referencia y el de un solo agente preservó cuatro. La siguiente fase incluirá más casos, nuevas ejecuciones por caso y la comparación con el diseño manual en TOAD Data Modeler.
+\end{abstract}
+
+\begin{IEEEkeywords}
+dependencias funcionales, diseño de bases de datos, modelos de lenguaje, PostgreSQL, tercera forma normal
+\end{IEEEkeywords}
+
+\section{Introducción}
+
+Si cada curso tiene un profesor asignado, el identificador del curso determina el del profesor. PostgreSQL puede crear las tablas de cursos y profesores aunque el esquema haya omitido ese vínculo. En ese caso, la base permite registrar cursos y profesores, pero no qué profesor dicta cada curso. Al evaluar el diseño comprobamos qué reglas del enunciado conserva el esquema y si el gestor puede ejecutar sus sentencias SQL.
+
+El modelo relacional de Codd permite estudiar cómo la organización de los datos afecta a su redundancia \cite{codd1970,codd1971}. El modelo entidad--relación de Chen describe las entidades del dominio y sus vínculos \cite{chen1976}. Un modelo de lenguaje puede proponer esas entidades y relaciones a partir de texto. Si pasa por alto una regla de negocio, la descomposición puede ser correcta para las dependencias inferidas y quedar incompleta para el dominio.
+
+El prototipo genera el esquema, su diccionario de datos y las sentencias del lenguaje de definición de datos (DDL) para PostgreSQL. Comparamos un flujo multiagente y otro de un solo agente con dos criterios: la conformidad del esquema con las dependencias de referencia y el tiempo de diseño. Sobre esas mismas especificaciones mediremos el tiempo de diseño manual con TOAD Data Modeler.
+
+\section{Fundamentos y trabajos relacionados}
+
+\subsection{Dependencias funcionales y tercera forma normal}
+
+Sea $R$ un esquema de relación y sean $X$ e $Y$ subconjuntos de sus atributos. La dependencia $X\to Y$ se cumple si dos tuplas que coinciden en $X$ también coinciden en $Y$. El cierre $X^{+}$ reúne los atributos que $X$ determina bajo un conjunto de dependencias. $X$ es superclave si su cierre abarca todos los atributos de $R$, y es clave candidata si además ningún subconjunto propio de $X$ es superclave.
+
+Una relación está en tercera forma normal (3FN) si, para cada dependencia no trivial $X\to A$ que se deduce de las dependencias proyectadas sobre esa relación, $X$ es superclave o $A$ pertenece a alguna clave candidata \cite{codd1971,bernstein1976}. Una descomposición preserva las dependencias originales si es posible deducirlas a partir de las dependencias proyectadas sobre sus tablas. La síntesis relacional usa estas dependencias para construir las tablas, y ambas propiedades se pueden comprobar mediante operaciones sobre conjuntos de atributos \cite{bernstein1976}.
+
+\subsection{Modelado con modelos de lenguaje}
+
+La primera búsqueda en Scopus combinó términos de modelos de lenguaje y sistemas multiagente con diseño, normalización y generación de esquemas. Su exportación contiene 189 registros. La segunda búsqueda se centró en 3FN y dependencias funcionales y devolvió 22 registros. Algunos trabajos aparecen en ambas exportaciones. Para este avance escogimos trabajos sobre generación de esquemas, verificación de restricciones y efectos de la normalización en SQL.
+
+Text2Schema, de Wang \textit{et al.}, genera estructuras relacionales a partir de descripciones en lenguaje natural \cite{wang2025}. Guimarães \textit{et al.} partieron de datos semiestructurados para generar diagramas entidad--relación. Con apoyo experto evaluaron la cobertura, la integridad referencial y la 3FN \cite{guimaraes2026}. AttributeForge aplica la división de tareas entre agentes al modelado de atributos de catálogos de productos \cite{huang2025}.
+
+ERBench usa dependencias funcionales y claves foráneas para construir preguntas cuyas respuestas se pueden verificar sobre bases relacionales \cite{oh2024}. En el prototipo usamos las dependencias para evaluar el propio esquema. Kohita observó que el nivel de normalización afecta de distinta forma a la generación de SQL según el tipo de consulta \cite{kohita2025}. Aquí evaluamos el diseño del esquema y las sentencias que lo crean.
+
+\section{Diseño del prototipo}
+
+El prototipo está escrito en Python y consulta el modelo local mediante Ollama. A partir del enunciado genera el análisis de requisitos, las tablas con sus claves, el diccionario y el DDL. En los archivos JSON de cada ejecución quedan las respuestas de los agentes, los reintentos, los tiempos y el resultado de la auditoría.
+
+\begin{figure}[t]
+\centering
+\setlength{\fboxsep}{3pt}
+\begin{tabular}{@{}c@{}}
+\fbox{\strut Requisitos en lenguaje natural} \\
+$\downarrow$ \\
+\fbox{\strut Analista $\to$ atributos y dependencias} \\
+$\downarrow$ \\
+\fbox{\strut Síntesis y auditoría $\to$ tablas en 3FN} \\
+$\downarrow$ \\
+\fbox{\strut Diccionario $\to$ definición de atributos} \\
+$\downarrow$ \\
+\fbox{\strut Codificador $\to$ tipos PostgreSQL} \\
+$\downarrow$ \\
+\fbox{\strut Generación y prueba del DDL}
+\end{tabular}
+\caption{Etapas del flujo multiagente implementado.}
+\label{fig:flujo}
+\end{figure}
+
+El analista propone los atributos, las entidades y sus dependencias funcionales (Fig.~\ref{fig:flujo}). El orquestador primero comprueba que cada dependencia use atributos declarados. Para formar las tablas, calcula una cubierta mínima y agrupa por determinante. Descarta las relaciones contenidas en otras y añade una relación con una clave candidata si ninguna tabla contiene una. El auditor proyecta las dependencias sobre cada tabla para calcular sus claves candidatas y comprobar la 3FN. También verifica que el conjunto de tablas cubra los atributos y preserve las dependencias.
+
+El agente del diccionario describe cada atributo aprobado, le asigna un tipo e indica si admite nulos. El codificador propone tipos de PostgreSQL para esas columnas. El orquestador ajusta las solicitudes a esquemas JSON y valida cada respuesta antes de pasar a la siguiente etapa. Puede pedir hasta dos correcciones por etapa. Si el codificador agota los intentos con respuestas inválidas, el generador usa los tipos del diccionario y el programa registra la recuperación. Las sentencias se construyen de forma determinista con las tablas aprobadas y los tipos validados.
+
+En el flujo de un solo agente, una consulta con el mismo enunciado devuelve los atributos, las dependencias, las tablas con sus claves y el diccionario. Se aplican el mismo auditor y el mismo generador de DDL, con una sola respuesta del modelo. El piloto compara los flujos completos. Medir cuánto aporta cada mecanismo requeriría ensayos que varíen por separado la división de roles, los reintentos y la síntesis determinista.
+
+\section{Metodología de evaluación}
+
+\subsection{Casos y condiciones de ejecución}
+
+El piloto incluyó tres casos sintéticos: matrícula universitaria, pedidos de tienda y citas clínicas. Los enunciados nombran los atributos y formulan varias dependencias de manera explícita. En la corrida presentada aquí ejecutamos cada caso una vez por flujo con \texttt{qwen3:4b} en Ollama. Usamos temperatura cero, semilla 42, modo de razonamiento desactivado y un límite de 240 segundos por consulta. Solo el evaluador recibe el conjunto de atributos y dependencias de referencia.
+
+En la evaluación ampliada incluiremos especificaciones más extensas y requisitos de casos reales. Revisaremos sus dependencias de referencia antes de ejecutar los flujos. Repetiremos cada caso y anotaremos los fallos, las recuperaciones y los tiempos de ambos métodos. Con estas pruebas podremos estudiar qué sucede cuando algunas reglas de negocio quedan implícitas en el enunciado.
+
+\subsection{Criterios de comparación}
+
+\begin{itemize}
+\item \textit{Extracción de dependencias.} La precisión es la proporción de dependencias inferidas que coinciden con la referencia y la exhaustividad es la proporción de dependencias esperadas que aparecen en la salida. El cotejo separa el lado derecho en atributos individuales y compara las dependencias por coincidencia literal, independientemente del orden de los atributos del determinante. La preservación se evalúa por separado mediante cierres.
+\item \textit{Conformidad del esquema.} Se comprueban la cobertura de atributos, la 3FN, la validez de las claves primarias, la preservación de las dependencias esperadas y, cuando se calcula, la presencia de una relación que contenga una clave candidata del conjunto original de atributos. La implementación admite hasta 14 atributos por tabla para la auditoría exacta.
+\item \textit{Ejecución del DDL.} El programa intenta crear el esquema en PostgreSQL dentro de una transacción que luego revierte. Registra si el gestor ejecutó las sentencias.
+\item \textit{Tiempo de diseño.} El cronómetro de cada flujo automático empieza al iniciar el diseño y termina cuando el programa devuelve el resultado. Incluye los reintentos. La prueba posterior en PostgreSQL se registra por separado.
+\end{itemize}
+
+Para la comparación manual, el participante recibirá el mismo enunciado. Mediremos desde que comience a analizarlo hasta que exporte el DDL de su esquema. Guardaremos ambos archivos para aplicar los mismos criterios de conformidad y ejecución. La planilla recoge el caso, el participante y las horas de inicio y fin.
+
+\section{Resultado preliminar}
+
+% Fuente de los tiempos y métricas del piloto: ../prototype/runs/benchmark/run_20261123T022054_082730Z_85c0f7ca/
+El caso de matrícula universitaria tiene siete atributos y cinco dependencias de referencia (Tabla~\ref{tab:piloto}). Una de ellas establece que para determinar la calificación se necesitan el identificador del estudiante y el del curso. El flujo multiagente generó cuatro relaciones para representar a estudiantes, profesores, cursos y matrículas.
+
+\begin{table}[htbp]
+\centering
+\caption{Caso piloto de matrícula universitaria}
+\label{tab:piloto}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Criterio & Multiagente & Un agente \\
+\midrule
+Dependencias identificadas & 5 de 5 & 4 de 5 \\
+Dependencias preservadas & 5 de 5 & 4 de 5 \\
+DDL ejecutado en PostgreSQL & Sí & Sí \\
+Tiempo de diseño (s) & 38,17 & 19,00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\balance
+El esquema de un solo agente tenía tablas para cursos y profesores, pero carecía del vínculo entre ellas. Las tablas estaban en 3FN y PostgreSQL ejecutó el DDL. La comprobación de preservación detectó la dependencia ausente, \texttt{course\_id} $\to$ \texttt{professor\_id}. En el flujo multiagente, el orquestador rechazó la primera respuesta del analista porque una dependencia usaba un atributo que el modelo no había declarado. La segunda respuesta permitió completar el diseño. El tiempo de la tabla incluye ambos intentos.
+
+\section{Evaluación pendiente}
+
+Con las ejecuciones adicionales y los tiempos de diseño manual en TOAD Data Modeler podremos comparar la conformidad de los esquemas y el tiempo de los tres métodos sobre los mismos enunciados.
+
+\begin{thebibliography}{9}
+
+\bibitem{codd1970}
+E. F. Codd, “A relational model of data for large shared data banks,” \emph{Commun. ACM}, vol. 13, no. 6, pp. 377--387, 1970, doi: \href{https://doi.org/10.1145/362384.362685}{10.1145/362384.362685}.
+
+\bibitem{codd1971}
+E. F. Codd, “Further normalization of the data base relational model,” IBM Research Laboratory, San Jose, CA, USA, Res. Rep. RJ909, 1971.
+
+\bibitem{chen1976}
+P. P.-S. Chen, “The entity-relationship model---toward a unified view of data,” \emph{ACM Trans. Database Syst.}, vol. 1, no. 1, pp. 9--36, 1976, doi: \href{https://doi.org/10.1145/320434.320440}{10.1145/320434.320440}.
+
+\bibitem{bernstein1976}
+P. A. Bernstein, “Synthesizing third normal form relations from functional dependencies,” \emph{ACM Trans. Database Syst.}, vol. 1, no. 4, pp. 277--298, 1976, doi: \href{https://doi.org/10.1145/320493.320489}{10.1145/320493.320489}.
+
+\bibitem{wang2025}
+Q. Wang \emph{et al.}, “Text2Schema: Filling the gap in designing database table structures based on natural language,” \href{https://arxiv.org/abs/2503.23886}{arXiv:2503.23886}, 2025.
+
+\bibitem{guimaraes2026}
+P. Guimarães, A. C. Vieira, V. Sousa, G. Moreira y M. Y. Santos, “Automated and LLM-assisted conceptual modeling from semi-structured data,” en \emph{The Practice of Enterprise Modeling}, LNBIP, vol. 570. Springer, 2026, pp. 121--129, doi: \href{https://doi.org/10.1007/978-3-032-12063-2_8}{10.1007/978-3-032-12063-2\_8}.
+
+\bibitem{huang2025}
+Y. Huang \emph{et al.}, “AttributeForge: An agentic LLM framework for automated product schema modeling,” in \emph{Proc. EMNLP, Industry Track}, 2025, pp. 2106--2121, doi: \href{https://doi.org/10.18653/v1/2025.emnlp-industry.148}{10.18653/v1/2025.emnlp-industry.148}.
+
+\bibitem{oh2024}
+J. Oh \emph{et al.}, “ERBench: An entity-relationship based automatically verifiable hallucination benchmark for large language models,” in \emph{Adv. Neural Inf. Process. Syst.}, vol. 37, 2024, doi: \href{https://doi.org/10.52202/079017-1681}{10.52202/079017-1681}.
+
+\bibitem{kohita2025}
+R. Kohita, “Exploring database normalization effects on SQL generation,” in \emph{Proc. 34th ACM Int. Conf. Inf. Knowl. Manage. (CIKM)}, 2025, pp. 5788--5796, doi: \href{https://doi.org/10.1145/3746252.3761583}{10.1145/3746252.3761583}.
+
+\end{thebibliography}
+\end{document}

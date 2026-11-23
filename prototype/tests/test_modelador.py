@@ -6,7 +6,7 @@ import unittest
 
 from modelador.core import audit_model, canonical_cover, closure, parse_fds, synthesize_3nf
 from modelador.evaluation import load_cases, run_benchmark, score
-from modelador.pipeline import design, render_ddl
+from modelador.pipeline import design, render_ddl, validate_dictionary_response
 
 
 CASES = Path(__file__).parents[1] / "cases" / "reference.json"
@@ -121,6 +121,36 @@ class NormalizationTests(unittest.TestCase):
         self.assertEqual(result["status"], "ok", result.get("error"))
         self.assertEqual(client.calls, 4)
         self.assertEqual(len([x for x in result["trace"] if x.get("agent") == "analyst"]), 1)
+
+    def test_three_observed_dictionary_shapes_report_missing_and_unknown_names(self):
+        attrs = load_cases(CASES)[0]["expected"]["attributes"]
+        observed = [
+            ["course_id", "course_name", "professor_id", "grade", "student_id"],
+            ["course_id", "course_name", "professor_id", "enrollment_course_id", "enrollment_grade", "enrollment_student_id", "professor_id", "professor_name", "student_id", "student_name"],
+            ["course_id", "course_name", "professor_id", "student_id", "student_name", "grade"],
+        ]
+        for names_seen in observed:
+            answer = {"columns": [{"name": name, "type": "TEXT", "nullable": False, "description": name} for name in names_seen]}
+            with self.subTest(names=names_seen), self.assertRaisesRegex(ValueError, "columns debe ser un objeto") as caught:
+                validate_dictionary_response(answer, attrs)
+            self.assertIn("faltan atributos", str(caught.exception))
+            self.assertIn("desconocidos", str(caught.exception))
+
+    def test_dictionary_remains_strict_after_three_attempts(self):
+        case = load_cases(CASES)[0]
+
+        class MissingDescription(FakeOllama):
+            def ask(self, system, user):
+                if "agente de diccionario" in system:
+                    self.calls += 1
+                    return {"columns": {name: {"type": "TEXT", "nullable": False, "description": name} for name in case["expected"]["attributes"] if name != "grade"}}, {}
+                return super().ask(system, user)
+
+        result = design(case["requirements"], MissingDescription(case["expected"]))
+        self.assertEqual(result["status"], "error")
+        self.assertIn("grade", result["error"])
+        self.assertEqual(len([x for x in result["trace"] if x.get("agent") == "dictionary"]), 3)
+        self.assertFalse(any(x.get("agent") == "coder" for x in result["trace"]))
 
     def test_echo_retry_limit_is_explicit(self):
         class AlwaysEcho:

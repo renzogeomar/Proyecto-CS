@@ -1,0 +1,7 @@
+case_id,mode,model,think,temperature,seed,timeout_seconds,status,coder_status,seconds,success,schema_success,ddl_generated,agents_completed,full_agent_success,fd_precision,fd_recall,inferred_3nf,gold_3nf,postgres_status,error
+matricula_universitaria,multi,qwen3:4b,False,0,42,240,ok,ok,38.167,True,True,True,True,True,1.0,1.0,True,True,passed,
+matricula_universitaria,single,qwen3:4b,False,0,42,240,ok,not_applicable,19.004,False,False,True,True,False,1.0,0.8,True,True,passed,
+pedidos_tienda,multi,qwen3:4b,False,0,42,240,ok,ok,33.958,True,True,True,True,True,1.0,1.0,True,True,passed,
+pedidos_tienda,single,qwen3:4b,False,0,42,240,ok,not_applicable,20.915,True,True,True,True,True,1.0,1.0,True,True,passed,
+citas_clinica,multi,qwen3:4b,False,0,42,240,ok,ok,28.052,True,True,True,True,True,1.0,1.0,True,True,passed,
+citas_clinica,single,qwen3:4b,False,0,42,240,ok,not_applicable,25.478,True,True,True,True,True,1.0,1.0,True,True,passed,

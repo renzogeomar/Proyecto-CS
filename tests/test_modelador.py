@@ -9,7 +9,7 @@ from modelador.evaluation import load_cases, run_benchmark, score
 from modelador.pipeline import design, render_ddl, validate_dictionary_response
 
 
-CASES = Path(__file__).parents[1] / "cases" / "reference.json"
+CASES = Path(__file__).parents[1] / "experiments" / "cases" / "reference.json"
 
 
 class FakeOllama:

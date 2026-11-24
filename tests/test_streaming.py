@@ -7,6 +7,8 @@ from contextlib import redirect_stdout, redirect_stderr
 from io import StringIO
 from unittest.mock import patch
 
+import _bootstrap  # noqa: F401
+
 from modelador.cli import main
 from modelador.adapters.ollama import Ollama, OllamaError
 from modelador.agents import ANALYST_SCHEMA

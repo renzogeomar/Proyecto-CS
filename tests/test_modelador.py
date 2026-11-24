@@ -4,6 +4,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
+import _bootstrap  # noqa: F401
+
 from modelador.core import audit_model, canonical_cover, closure, parse_fds, synthesize_3nf
 from modelador.evaluation import load_cases, run_benchmark, score
 from modelador.agents import validate_dictionary_response

@@ -74,14 +74,26 @@ identificadores de las ejecuciones.
 
 ## Pruebas y compilación
 
-Con el entorno virtual activo, desde la raíz:
+Para instalar las herramientas de desarrollo y ejecutar las comprobaciones:
 
 ```bash
+python -m pip install -e '.[dev]'
+ruff check .
+pytest
 python -m unittest discover -s tests -v
 ```
 
 Las pruebas usan un modelo simulado y pueden ejecutarse sin Ollama ni una base
-PostgreSQL disponible. Para compilar el artículo con LaTeX y `latexmk`:
+PostgreSQL disponible. `unittest` también funciona desde la raíz sin instalar
+el paquete. El extra `web` prepara las dependencias de las fases posteriores:
+`python -m pip install -e '.[web,dev]'`. El archivo `requirements.txt` se
+genera a partir de ese extra con `pip-compile --extra web --strip-extras
+--output-file requirements.txt pyproject.toml`; fue resuelto en Linux con
+Python 3.14 y debe regenerarse y comprobarse para el Python del contenedor.
+Las variables de `.env.example` son ejemplos para fases posteriores; todavía
+no habilitan el proveedor OpenAI ni el despliegue.
+
+Para compilar el artículo con LaTeX y `latexmk`:
 
 ```bash
 cd docs/article

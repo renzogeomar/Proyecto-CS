@@ -1,8 +1,8 @@
 """Evaluación reproducible frente a casos con respuestas esperadas."""
 
 import csv
-from datetime import datetime, timezone
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -17,7 +17,8 @@ def score(result, expected):
     artifact = result["artifact"]
     inferred = artifact["analysis"]["functional_dependencies"]
     gold = expected["functional_dependencies"]
-    to_set = lambda data: {(tuple(sorted(x["determinant"])), dependent) for x in data for dependent in x["dependent"]}
+    def to_set(data):
+        return {(tuple(sorted(x["determinant"])), dependent) for x in data for dependent in x["dependent"]}
     got, want = to_set(inferred), to_set(gold)
     precision = len(got & want) / len(got) if got else 0
     recall = len(got & want) / len(want) if want else 1

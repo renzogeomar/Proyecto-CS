@@ -1,13 +1,21 @@
 """Orquestación de los flujos de diseño relacional."""
 
+import time
+from copy import copy
 from datetime import datetime, timezone
 from functools import partial
-import time
 
-from .adapters.ollama import Ollama, OllamaError
+from .adapters import default_client
+from .adapters.base import LLMError
 from .agents import (
-    analyst, coder_agent, dictionary_agent, name_tables, single_agent,
-    validate_coder, validate_dictionary, validate_single_response,
+    analyst,
+    coder_agent,
+    dictionary_agent,
+    name_tables,
+    single_agent,
+    validate_coder,
+    validate_dictionary,
+    validate_single_response,
 )
 from .core import ModelError, audit_model, parse_fds, synthesize_3nf
 from .sql import render_ddl
@@ -17,10 +25,10 @@ def _agent(client, trace, role, system, prompt, schema):
     start = time.perf_counter()
     entry = {"agent": role, "status": "running"}
     trace.append(entry)
-    if isinstance(client, Ollama) and client.progress:
+    if getattr(client, "progress", None):
         client.progress({"event": "started", "agent": role})
     try:
-        answer, usage = client.ask(system, prompt, schema=schema) if isinstance(client, Ollama) else client.ask(system, prompt)
+        answer, usage = client.ask(system, prompt, schema=schema)
     except BaseException as exc:
         entry.update({"status": "cancelled" if isinstance(exc, KeyboardInterrupt) else "error", "seconds": round(time.perf_counter() - start, 3), "error": str(exc)})
         if getattr(exc, "partial", ""):
@@ -29,7 +37,7 @@ def _agent(client, trace, role, system, prompt, schema):
             entry["usage"] = exc.usage
         raise
     entry.update({"status": "ok", "seconds": round(time.perf_counter() - start, 3), "usage": usage, "output": answer})
-    if isinstance(client, Ollama) and client.progress:
+    if getattr(client, "progress", None):
         client.progress({"event": "completed", "agent": role, "seconds": entry["seconds"]})
     return answer
 
@@ -50,7 +58,7 @@ def _retry_stage(role, operation, trace, client, retries):
             reason = str(exc)
             _reject(trace, role, reason)
             trace.append({"agent": "auditor", "stage": role, "attempt": attempt + 1, "error": reason})
-            if isinstance(client, Ollama) and client.progress:
+            if getattr(client, "progress", None):
                 client.progress({"event": "rejected", "agent": role, "reason": reason})
             feedback = reason
     raise ModelError(f"{role}: no se obtuvo una respuesta válida tras {retries + 1} intentos; último error: {feedback}")
@@ -87,7 +95,7 @@ def _design_multi(client, requirements, trace, retries):
         coder, ddl = None, render_ddl(tables, dictionary)
         coder_status, coder_error = "fallback", str(exc)
         trace.append({"agent": "coder", "status": "fallback", "reason": coder_error})
-        if isinstance(client, Ollama) and client.progress:
+        if getattr(client, "progress", None):
             client.progress({"event": "fallback", "agent": "coder", "reason": coder_error})
     return {"analysis": analysis, "tables": tables, "dictionary": dictionary, "coder": coder, "coder_status": coder_status,
             "coder_error": coder_error, "audit": audit, "ddl": ddl}
@@ -111,9 +119,10 @@ def design(requirements, client=None, mode="multi", retries=2, progress=None):
         raise ValueError("Los requisitos no pueden estar vacíos")
     if mode not in {"multi", "single"}:
         raise ValueError("mode debe ser multi o single")
-    client = client or Ollama()
-    if isinstance(client, Ollama) and progress:
-        client = Ollama(client.model, client.url, client.timeout, progress, client.worker_command)
+    client = client if client is not None else default_client()
+    if progress is not None:
+        client = copy(client)
+        client.progress = progress
     trace = []
     start = time.perf_counter()
     result = {"requirements": requirements, "mode": mode, "model": client.model, "started_at": datetime.now(timezone.utc).isoformat(), "trace": trace,
@@ -121,7 +130,7 @@ def design(requirements, client=None, mode="multi", retries=2, progress=None):
     try:
         result["artifact"] = _design_multi(client, requirements, trace, retries) if mode == "multi" else _design_single(client, requirements, trace)
         result["status"] = "ok"
-    except (OllamaError, ModelError, KeyError, TypeError, ValueError) as exc:
+    except (LLMError, ModelError, KeyError, TypeError, ValueError) as exc:
         result["status"] = "error"
         result["error"] = str(exc)
     except KeyboardInterrupt:

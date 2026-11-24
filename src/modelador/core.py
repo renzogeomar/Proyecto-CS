@@ -6,9 +6,8 @@ puede demostrar que las dependencias inferidas de lenguaje natural son ciertas.
 
 from __future__ import annotations
 
-from itertools import combinations
 import re
-
+from itertools import combinations
 
 IDENT = re.compile(r"^[a-z][a-z0-9_]*$")
 MAX_TABLE_ATTRIBUTES = 14

@@ -1,16 +1,14 @@
 """Interfaz web local sin dependencias externas."""
 
+import json
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-import json
 from pathlib import Path
 from threading import Lock, Thread
-import time
 from uuid import uuid4
 
 from .adapters.postgres import validate_postgres
 from .pipeline import design
-
 
 HTML = r'''<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

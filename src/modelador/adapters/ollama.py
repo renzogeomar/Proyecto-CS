@@ -7,8 +7,10 @@ import subprocess
 import sys
 import time
 
+from .base import LLMError
 
-class OllamaError(RuntimeError):
+
+class OllamaError(LLMError):
     pass
 
 
@@ -87,4 +89,6 @@ class Ollama:
             answer = json.loads("".join(content))
         except ValueError as exc:
             raise OllamaError("Ollama no devolvió JSON válido") from exc
+        usage["input_tokens"] = usage.get("prompt_eval_count") or 0
+        usage["output_tokens"] = usage.get("eval_count") or 0
         return answer, usage

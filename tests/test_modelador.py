@@ -10,6 +10,7 @@ from modelador.core import audit_model, canonical_cover, closure, parse_fds, syn
 from modelador.evaluation import load_cases, run_benchmark, score
 from modelador.agents import validate_dictionary_response
 from modelador.pipeline import design
+from modelador.adapters.base import LLMError
 
 
 CASES = Path(__file__).parents[1] / "experiments" / "cases" / "reference.json"
@@ -23,7 +24,7 @@ class FakeOllama:
         self.current = expected
         self.calls = 0
 
-    def ask(self, system, user):
+    def ask(self, system, user, schema=None):
         self.calls += 1
         if self.expected is None:
             for case in load_cases(CASES):
@@ -44,6 +45,34 @@ class FakeOllama:
 
 
 class NormalizationTests(unittest.TestCase):
+    def test_generic_client_receives_schemas_and_progress(self):
+        case = load_cases(CASES)[0]
+        events = []
+
+        class SchemaClient(FakeOllama):
+            progress = events.append
+
+            def ask(self, system, user, schema=None):
+                if not schema or "required" not in schema:
+                    raise AssertionError("Falta el esquema del agente")
+                return super().ask(system, user, schema=schema)
+
+        result = design(case["requirements"], SchemaClient(case["expected"]))
+        self.assertEqual(result["status"], "ok", result.get("error"))
+        self.assertEqual([event["event"] for event in events], ["started", "completed"] * 3)
+
+    def test_generic_llm_error_is_reported(self):
+        class BrokenClient:
+            model = "fake"
+            progress = None
+
+            def ask(self, system, user, schema=None):
+                raise LLMError("proveedor no disponible")
+
+        result = design("Un requisito", BrokenClient())
+        self.assertEqual(result["status"], "error")
+        self.assertIn("proveedor no disponible", result["error"])
+
     def test_transitive_dependency_detected(self):
         attrs = ["student_id", "course_id", "professor_id", "professor_name"]
         fds = [{"determinant": ["student_id"], "dependent": ["course_id"]}, {"determinant": ["course_id"], "dependent": ["professor_id"]}, {"determinant": ["professor_id"], "dependent": ["professor_name"]}]
@@ -93,11 +122,11 @@ class NormalizationTests(unittest.TestCase):
         case = load_cases(CASES)[0]
 
         class EchoFirst(FakeOllama):
-            def ask(self, system, user):
+            def ask(self, system, user, schema=None):
                 if self.calls == 0:
                     self.calls += 1
                     return {"requirements": case["requirements"], "feedback": None}, {"eval_count": 10}
-                return super().ask(system, user)
+                return super().ask(system, user, schema=schema)
 
         client = EchoFirst(case["expected"])
         result = design(case["requirements"], client)
@@ -112,12 +141,12 @@ class NormalizationTests(unittest.TestCase):
         case = load_cases(CASES)[0]
 
         class BadDictionaryOnce(FakeOllama):
-            def ask(self, system, user):
+            def ask(self, system, user, schema=None):
                 if "agente de diccionario" in system and not hasattr(self, "failed"):
                     self.failed = True
                     self.calls += 1
                     return {"columns": []}, {}
-                return super().ask(system, user)
+                return super().ask(system, user, schema=schema)
 
         client = BadDictionaryOnce(case["expected"])
         result = design(case["requirements"], client)
@@ -143,11 +172,11 @@ class NormalizationTests(unittest.TestCase):
         case = load_cases(CASES)[0]
 
         class MissingDescription(FakeOllama):
-            def ask(self, system, user):
+            def ask(self, system, user, schema=None):
                 if "agente de diccionario" in system:
                     self.calls += 1
                     return {"columns": {name: {"type": "TEXT", "nullable": False, "description": name} for name in case["expected"]["attributes"] if name != "grade"}}, {}
-                return super().ask(system, user)
+                return super().ask(system, user, schema=schema)
 
         result = design(case["requirements"], MissingDescription(case["expected"]))
         self.assertEqual(result["status"], "error")
@@ -158,7 +187,7 @@ class NormalizationTests(unittest.TestCase):
     def test_echo_retry_limit_is_explicit(self):
         class AlwaysEcho:
             model = "fake"
-            def ask(self, system, user):
+            def ask(self, system, user, schema=None):
                 return {"requirements": user, "feedback": None}, {}
 
         result = design("Un requisito", AlwaysEcho())
@@ -171,12 +200,12 @@ class NormalizationTests(unittest.TestCase):
         case = load_cases(CASES)[0]
 
         class BadCoderOnce(FakeOllama):
-            def ask(self, system, user):
+            def ask(self, system, user, schema=None):
                 if "agente codificador" in system and not hasattr(self, "failed"):
                     self.failed = True
                     self.calls += 1
                     return {"column_types": {"student_id": "MYSTERY"}, "notes": []}, {}
-                return super().ask(system, user)
+                return super().ask(system, user, schema=schema)
 
         client = BadCoderOnce(case["expected"])
         result = design(case["requirements"], client)
@@ -187,7 +216,7 @@ class NormalizationTests(unittest.TestCase):
     def test_single_agent_echo_has_clear_error_without_retry(self):
         class AlwaysEcho:
             model = "fake"
-            def ask(self, system, user):
+            def ask(self, system, user, schema=None):
                 return {"requirements": user}, {}
 
         result = design("Un requisito", AlwaysEcho(), mode="single")
@@ -203,7 +232,7 @@ class NormalizationTests(unittest.TestCase):
                 super().__init__(expected)
                 self.dictionary_attempts = 0
 
-            def ask(self, system, user):
+            def ask(self, system, user, schema=None):
                 if "agente de diccionario" in system:
                     self.dictionary_attempts += 1
                     if self.dictionary_attempts == 1:
@@ -212,7 +241,7 @@ class NormalizationTests(unittest.TestCase):
                 if "agente codificador" in system:
                     self.calls += 1
                     return {"column_types": {"atributo": "TEXT"}, "notes": []}, {}
-                answer, usage = super().ask(system, user)
+                answer, usage = super().ask(system, user, schema=schema)
                 if "Extrae atributos atómicos" in system:
                     answer["entities"] = [{"name": "Student", "attributes": ["student_id", "student_name"]}]
                 return answer, usage

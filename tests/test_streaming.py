@@ -30,6 +30,8 @@ print(json.dumps({'event':'done','usage':{'eval_count':2}}),flush=True)
         answer, usage = client.ask("system", "user", ANALYST_SCHEMA)
         self.assertEqual(answer, {"answer": 1})
         self.assertEqual(usage["eval_count"], 2)
+        self.assertEqual(usage["input_tokens"], 0)
+        self.assertEqual(usage["output_tokens"], 2)
 
     def test_deadline_preserves_partial_response(self):
         script = """import json,sys,time
@@ -71,7 +73,7 @@ print(json.dumps({'event':'done','usage':{'eval_count':1}}),flush=True)
         class InterruptingClient:
             model = "fake"
 
-            def ask(self, system, user):
+            def ask(self, system, user, schema=None):
                 raise KeyboardInterrupt()
 
         result = design("Un requisito", InterruptingClient())

@@ -1,15 +1,21 @@
 """Orquestación de los flujos de diseño relacional."""
 
-from datetime import datetime, timezone
-from copy import copy
-from functools import partial
 import time
+from copy import copy
+from datetime import datetime, timezone
+from functools import partial
 
 from .adapters import default_client
 from .adapters.base import LLMError
 from .agents import (
-    analyst, coder_agent, dictionary_agent, name_tables, single_agent,
-    validate_coder, validate_dictionary, validate_single_response,
+    analyst,
+    coder_agent,
+    dictionary_agent,
+    name_tables,
+    single_agent,
+    validate_coder,
+    validate_dictionary,
+    validate_single_response,
 )
 from .core import ModelError, audit_model, parse_fds, synthesize_3nf
 from .sql import render_ddl

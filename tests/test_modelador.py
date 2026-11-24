@@ -1,17 +1,15 @@
-import json
 import csv
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from modelador.core import audit_model, canonical_cover, closure, parse_fds, synthesize_3nf
-from modelador.evaluation import load_cases, run_benchmark, score
-from modelador.agents import validate_dictionary_response
-from modelador.pipeline import design
 from modelador.adapters.base import LLMError
-
+from modelador.agents import validate_dictionary_response
+from modelador.core import audit_model, parse_fds, synthesize_3nf
+from modelador.evaluation import load_cases, run_benchmark, score
+from modelador.pipeline import design
 
 CASES = Path(__file__).parents[1] / "experiments" / "cases" / "reference.json"
 

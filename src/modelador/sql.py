@@ -2,7 +2,6 @@
 
 from .core import ModelError
 
-
 ALLOWED_TYPES = {"TEXT", "INTEGER", "BIGINT", "NUMERIC", "BOOLEAN", "DATE", "TIMESTAMP", "UUID"}
 
 

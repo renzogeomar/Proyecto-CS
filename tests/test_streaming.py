@@ -1,17 +1,17 @@
 import json
 import sys
 import tempfile
-from pathlib import Path
 import unittest
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
+from pathlib import Path
 from unittest.mock import patch
 
 import _bootstrap  # noqa: F401
 
-from modelador.cli import main
 from modelador.adapters.ollama import Ollama, OllamaError
 from modelador.agents import ANALYST_SCHEMA
+from modelador.cli import main
 from modelador.pipeline import design
 
 

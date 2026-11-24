@@ -1,10 +1,10 @@
 """CLI: python -m modelador ..."""
 
 import argparse
-from datetime import datetime
 import json
-from pathlib import Path
 import sys
+from datetime import datetime
+from pathlib import Path
 
 from .adapters.ollama import Ollama
 from .adapters.postgres import validate_postgres
